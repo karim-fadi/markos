@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Markos Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{
+  --bg1:#1a0f3a; --bg2:#2d1b6b; --bg3:#4a2ab0;
+  --panel:#211455; --panel2:#2f1f75;
+  --gold:#ffcc33; --gold2:#ff9a1f; --gold3:#a85f00;
+  --blue:#3aa0ff; --blue2:#1b6be0;
+  --green:#5bd35b; --green2:#2f9f2f;
+  --red:#ff5a5a; --red2:#c62828;
+  --text:#fff; --muted:#b7a9e6; --border:#0f0828;
+  --shadow:0 6px 0 var(--border),0 12px 20px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:'Nunito',sans-serif;color:var(--text);background:radial-gradient(1200px 600px at 50% -10%,var(--bg3),var(--bg1) 60%);background-attachment:fixed;overflow:hidden}
+h1,h2,h3{font-family:'Lilita One',cursive;letter-spacing:.5px;text-shadow:0 3px 0 rgba(0,0,0,.35)}
+button{font-family:inherit;cursor:pointer;border:none;color:inherit}
+#app{height:100%;display:flex;flex-direction:column}
+header{padding:calc(env(safe-area-inset-top) + 10px) 14px 10px;display:flex;align-items:center;justify-content:space-between}
+header h1{font-size:24px;color:var(--gold)}
+header h1 small{font-family:'Nunito';font-size:11px;color:var(--muted);letter-spacing:2px;display:block;text-shadow:none}
+main{flex:1;overflow:hidden;position:relative}
+.page{position:absolute;inset:0;overflow-y:auto;padding:6px 14px calc(100px + env(safe-area-inset-bottom));opacity:0;transform:translateX(30px);pointer-events:none;transition:.3s}
+.page.active{opacity:1;transform:none;pointer-events:auto}
+.page h2{font-size:26px;margin:8px 0 14px}.page h2 span{color:var(--gold)}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:8px 8px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(180deg,#160b33,#0d0620);border-top:3px solid #3c2a80;display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+nav button{background:transparent;border-radius:14px;padding:6px 2px;display:flex;flex-direction:column;align-items:center;gap:2px;font-weight:900;font-size:10px;color:var(--muted);transition:.2s}
+nav button .ic{font-size:22px;transition:transform .3s cubic-bezier(.2,1.6,.4,1);filter:grayscale(.6)}
+nav button.on{color:var(--gold);background:linear-gradient(180deg,#3d2a8a,#2a1c66);box-shadow:0 3px 0 var(--border)}
+nav button.on .ic{transform:translateY(-4px) scale(1.25);filter:none}
+.card{background:linear-gradient(180deg,var(--panel2),var(--panel));border-radius:18px;padding:14px;box-shadow:var(--shadow);border:2px solid #4b36a3;position:relative;margin-bottom:12px;animation:pop .35s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes pop{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 18px;border-radius:14px;font-family:'Lilita One';font-size:17px;text-shadow:0 2px 0 rgba(0,0,0,.3);background:linear-gradient(180deg,var(--blue),var(--blue2));box-shadow:0 5px 0 #0d3f8f,0 8px 12px rgba(0,0,0,.35);transition:.1s;user-select:none}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 #0d3f8f}
+.btn.gold{background:linear-gradient(180deg,var(--gold),var(--gold2));box-shadow:0 5px 0 var(--gold3),0 8px 12px rgba(0,0,0,.35);color:#4a2a00;text-shadow:0 1px 0 rgba(255,255,255,.4)}
+.btn.green{background:linear-gradient(180deg,var(--green),var(--green2));box-shadow:0 5px 0 #1b6b1b}
+.btn.red{background:linear-gradient(180deg,var(--red),var(--red2));box-shadow:0 5px 0 #7a1010}
+.btn.gray{background:linear-gradient(180deg,#6b7a99,#46526e);box-shadow:0 5px 0 #262d3f}
+.btn.sm{padding:7px 12px;font-size:14px}.btn.wide{width:100%}
+.btn[disabled]{opacity:.5;pointer-events:none}
+.inp,textarea.inp,select.inp{width:100%;padding:12px;border-radius:12px;border:2px solid #4b36a3;background:#150b3a;color:#fff;font-family:'Nunito';font-weight:800;font-size:15px;outline:none;margin-bottom:10px}
+.inp:focus{border-color:var(--gold)}
+textarea.inp{min-height:90px;resize:vertical}
+label.lbl{display:block;font-size:11px;font-weight:900;color:var(--muted);letter-spacing:1px;margin:4px 0 4px}
+.row{display:flex;gap:8px;align-items:center}
+.row .inp{margin-bottom:0}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-weight:900;font-size:12px;background:rgba(0,0,0,.3)}
+.pill.gold{background:linear-gradient(180deg,var(--gold),var(--gold2));color:#4a2a00}
+.muted{color:var(--muted);font-weight:800;font-size:13px}
+.item{display:flex;align-items:center;gap:10px}
+.item .grow{flex:1;min-width:0}
+.item h3{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item p{font-size:12px;color:var(--muted);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.av{width:44px;height:44px;border-radius:12px;overflow:hidden;background:#3a2a8a;border:2px solid var(--gold);display:grid;place-items:center;font-family:'Lilita One';font-size:20px;flex-shrink:0;position:relative}
+.av img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+
+/* SCORE PAGE */
+.scoregrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px}
+.sbtn{aspect-ratio:1;border-radius:16px;font-family:'Lilita One';font-size:24px;text-shadow:0 2px 0 rgba(0,0,0,.3);transition:.15s;box-shadow:0 5px 0 var(--sh);background:linear-gradient(180deg,var(--a),var(--b))}
+.sbtn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--sh)}
+.sbtn.plus{--a:#5bd35b;--b:#2f9f2f;--sh:#1b6b1b}
+.sbtn.minus{--a:#ff5a5a;--b:#c62828;--sh:#7a1010}
+.sbtn.sel{outline:4px solid var(--gold);outline-offset:2px;transform:scale(1.08)}
+#reader{width:100%;border-radius:16px;overflow:hidden;background:#000;min-height:240px;display:none}
+#reader.on{display:block}
+.selected-op{font-family:'Lilita One';font-size:40px;text-align:center;margin:6px 0}
+.selected-op.plus{color:var(--green)}.selected-op.minus{color:var(--red)}
+.log{font-size:13px;font-weight:800;padding:8px 10px;border-radius:10px;background:rgba(0,0,0,.3);margin-top:6px;border-left:4px solid var(--gold)}
+
+/* QUESTION BUILDER */
+.qb{background:rgba(0,0,0,.25);border-radius:14px;padding:10px;margin-bottom:10px;border:2px dashed #5a46b8}
+.qb .opts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.qb .opt{display:flex;align-items:center;gap:6px}
+.qb .opt input[type=radio]{width:20px;height:20px;accent-color:var(--gold);flex-shrink:0}
+.qb .opt .inp{margin:0;padding:8px}
+.badgepick{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px}
+.bp{padding:10px 4px;text-align:center;border-radius:12px;background:rgba(0,0,0,.3);cursor:pointer;border:2px solid transparent;filter:grayscale(1);opacity:.5;transition:.2s}
+.bp.on{filter:none;opacity:1;border-color:var(--gold);background:rgba(255,204,51,.15)}
+.bp .em{font-size:28px}.bp .nm{font-size:10px;font-weight:900;margin-top:4px}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;z-index:50;background:rgba(5,5,25,.78);backdrop-filter:blur(6px);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:.25s}
+.overlay.show{opacity:1;pointer-events:auto}
+.modal{position:relative;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;border-radius:26px 26px 0 0;padding:20px 18px calc(24px + env(safe-area-inset-bottom));background:linear-gradient(180deg,#3a2690,#1a0f3a);border:3px solid #5a46b8;border-bottom:none;transform:translateY(60px);transition:transform .35s cubic-bezier(.2,1.2,.3,1)}
+.overlay.show .modal{transform:none}
+@media(min-width:600px){.overlay{align-items:center}.modal{border-radius:26px;border-bottom:3px solid #5a46b8}}
+.modal .x{position:absolute;top:12px;right:14px;width:34px;height:34px;border-radius:10px;background:var(--red);box-shadow:0 3px 0 #7a1010;font-family:'Lilita One';font-size:18px;z-index:2}
+#qrbox{display:grid;place-items:center;background:#fff;padding:16px;border-radius:16px;margin:12px auto;width:fit-content}
+#toast{position:fixed;left:50%;top:80px;transform:translate(-50%,-30px);z-index:200;padding:12px 20px;border-radius:14px;font-family:'Lilita One';font-size:17px;background:linear-gradient(180deg,var(--gold),var(--gold2));color:#4a2a00;box-shadow:0 5px 0 var(--gold3),0 10px 20px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:.3s}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+#toast.bad{background:linear-gradient(180deg,var(--red),var(--red2));color:#fff;box-shadow:0 5px 0 #7a1010}
+#gate{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(800px 500px at 50% 0%,var(--bg3),var(--bg1) 70%)}
+#gate .box{width:100%;max-width:360px;text-align:center}
+#gate h1{font-size:40px;color:var(--gold)}
+#gate .crest{font-size:70px;margin-bottom:8px}
+.empty{text-align:center;color:var(--muted);font-weight:800;padding:30px 10px}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="box">
+    <div class="crest">🛡️</div>
+    <h1>MARKOS ADMIN</h1>
+    <p class="muted" style="margin:6px 0 18px">Enter the admin PIN</p>
+    <input class="inp" id="pin" type="password" placeholder="PIN" style="text-align:center;font-size:22px">
+    <button class="btn gold wide" onclick="unlock()">UNLOCK</button>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <h1>MARKOS <small>ADMIN PANEL</small></h1>
+    <button class="btn gray sm" onclick="localStorage.removeItem('markos_admin');location.reload()">Lock 🔒</button>
+  </header>
+  <main>
+    <!-- SCORE -->
+    <section class="page active" id="p-score">
+      <h2>Score <span>Keros 🪶</span></h2>
+      <div class="card">
+        <label class="lbl">ADD KEROS</label>
+        <div class="scoregrid">
+          <button class="sbtn plus" onclick="pick(1)">+1</button><button class="sbtn plus" onclick="pick(2)">+2</button><button class="sbtn plus" onclick="pick(3)">+3</button><button class="sbtn plus" onclick="pick(4)">+4</button><button class="sbtn plus" onclick="pick(5)">+5</button>
+        </div>
+        <label class="lbl">REMOVE KEROS</label>
+        <div class="scoregrid">
+          <button class="sbtn minus" onclick="pick(-1)">-1</button><button class="sbtn minus" onclick="pick(-2)">-2</button><button class="sbtn minus" onclick="pick(-3)">-3</button><button class="sbtn minus" onclick="pick(-4)">-4</button><button class="sbtn minus" onclick="pick(-5)">-5</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="selected-op" id="opLabel">Pick an amount</div>
+        <div id="reader"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn gold" style="flex:1" id="scanBtn" onclick="toggleScan()" disabled>📷 SCAN QR</button>
+        </div>
+        <label class="lbl" style="margin-top:12px">OR PICK A STUDENT MANUALLY</label>
+        <div class="row">
+          <select class="inp" id="manualStudent"></select>
+          <button class="btn sm" onclick="applyManual()" id="manualBtn" disabled>Apply</button>
+        </div>
+        <div id="scanLog"></div>
+      </div>
+    </section>
+
+    <!-- STUDENTS -->
+    <section class="page" id="p-students">
+      <h2>Students <span id="stuCount"></span></h2>
+      <div class="card">
+        <label class="lbl">ADD STUDENT</label>
+        <div class="row">
+          <input class="inp" id="newName" placeholder="Full name (matches image file name)">
+          <button class="btn green sm" onclick="addStudent()">Add</button>
+        </div>
+        <p class="muted" style="margin-top:8px">Image file must be <b>images/&lt;name&gt;.jpg</b> next to the student site.</p>
+      </div>
+      <div id="stuList"></div>
+    </section>
+
+    <!-- NEWS -->
+    <section class="page" id="p-news">
+      <h2>News <span>& Events</span></h2>
+      <div class="card">
+        <input class="inp" id="newsTitle" placeholder="Headline">
+        <textarea class="inp" id="newsText" placeholder="Description (date, place, what to bring...)"></textarea>
+        <button class="btn green wide" onclick="addNews()">📢 Publish</button>
+      </div>
+      <div id="newsList"></div>
+    </section>
+
+    <!-- CHALLENGES -->
+    <section class="page" id="p-chal">
+      <h2>Challenges</h2>
+      <div class="card">
+        <input class="inp" id="chTitle" placeholder="Challenge title">
+        <textarea class="inp" id="chDesc" placeholder="Short description" style="min-height:60px"></textarea>
+        <label class="lbl">QUESTIONS (tick the correct answer)</label>
+        <div id="qBuilder"></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn gray sm" onclick="addQ()">+ Question</button>
+          <button class="btn green" style="flex:1" onclick="saveChallenge()">⚔️ Save Challenge</button>
+        </div>
+      </div>
+      <div id="chalList"></div>
+    </section>
+
+    <!-- SHOP -->
+    <section class="page" id="p-shop">
+      <h2>Gift <span>Shop</span></h2>
+      <div class="card">
+        <div class="row" style="margin-bottom:10px">
+          <input class="inp" id="gEmoji" placeholder="🎁" style="width:70px;text-align:center;font-size:22px">
+          <input class="inp" id="gName" placeholder="Gift name">
+        </div>
+        <div class="row" style="margin-bottom:10px">
+          <input class="inp" id="gCost" type="number" placeholder="Cost (Keros)">
+          <input class="inp" id="gQty" type="number" placeholder="Quantity">
+        </div>
+        <button class="btn green wide" onclick="addGift()">🎁 Add Gift</button>
+      </div>
+      <div id="shopList"></div>
+    </section>
+  </main>
+
+  <nav id="nav">
+    <button data-p="score" class="on"><span class="ic">🪶</span>Score</button>
+    <button data-p="students"><span class="ic">👥</span>Students</button>
+    <button data-p="news"><span class="ic">📰</span>News</button>
+    <button data-p="chal"><span class="ic">⚔️</span>Challenges</button>
+    <button data-p="shop"><span class="ic">🎁</span>Shop</button>
+  </nav>
+</div>
+
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()"><div class="modal" id="modal"></div></div>
+<div id="toast"></div>
+
+<script>
+/* ============================================================
+   1. CONFIG — same Firebase project as markos.html
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyCo9k2OLVQprNoCFEjEAHVInOcvS7NlUvo",
+  authDomain: "abrar-100.firebaseapp.com",
+  projectId: "abrar-100",
+  storageBucket: "abrar-100.firebasestorage.app",
+  messagingSenderId: "1031124601739",
+  appId: "1:1031124601739:web:0fbbf88a38d32ffae47d8e",
+  measurementId: "G-YCSYCQ6DV2"
+};
+const ADMIN_PIN = "1234";   // change this! (V1 gate only — not real security)
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const FV = firebase.firestore.FieldValue;
+const IMG_DIR = "images/";
+
+/* Must match the student file */
+const ARENAS = [
+  {name:"Training Camp",min:0,em:"🏕️"},{name:"Bethlehem Stable",min:25,em:"⭐"},{name:"Nazareth Hills",min:50,em:"🌄"},
+  {name:"Galilee Shores",min:100,em:"⛵"},{name:"Jordan River",min:175,em:"🌊"},{name:"Jericho Walls",min:275,em:"🏰"},
+  {name:"Mount Sinai",min:400,em:"⛰️"},{name:"Jerusalem Gates",min:550,em:"🕌"},{name:"Temple Courts",min:750,em:"🏛️"},
+  {name:"Heaven's Arena",min:1000,em:"👑"},
+];
+const BADGES = [
+  {id:"first_step",em:"👣",name:"First Step"},{id:"scholar",em:"📖",name:"Scholar"},{id:"perfect",em:"💯",name:"Perfect"},
+  {id:"faithful",em:"🕊️",name:"Faithful"},{id:"early_bird",em:"🐦",name:"Early Bird"},{id:"helper",em:"🤝",name:"Helper"},
+  {id:"memorizer",em:"🧠",name:"Memorizer"},{id:"singer",em:"🎵",name:"Singer"},{id:"servant",em:"🧹",name:"Servant"},
+  {id:"champion",em:"🏆",name:"Champion"},{id:"kind_heart",em:"💛",name:"Kind Heart"},{id:"legend",em:"🌟",name:"Legend"},
+];
+
+/* ============================================================
+   2. HELPERS / STATE
+   ============================================================ */
+let students=[], news=[], challenges=[], shop=[];
+const $ = id=>document.getElementById(id);
+const esc = s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const arenaOf = e=>{let a=ARENAS[0];for(const x of ARENAS)if(e>=x.min)a=x;return a;};
+const avatar = s=>`<div class="av">${esc((s.name||"?")[0])}<img src="${IMG_DIR}${encodeURIComponent(s.name)}.jpg" alt="" onerror="this.remove()"></div>`;
+function toast(m,bad){const t=$("toast");t.textContent=m;t.className=bad?"show bad":"show";clearTimeout(t._t);t._t=setTimeout(()=>t.className="",2200);}
+function openModal(h){$("modal").innerHTML=`<button class="x" onclick="closeModal()">✕</button>`+h;$("overlay").classList.add("show");}
+function closeModal(){$("overlay").classList.remove("show");}
+const slug = n=>n.toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
+
+/* ============================================================
+   3. GATE
+   ============================================================ */
+function unlock(){ if($("pin").value===ADMIN_PIN){localStorage.setItem("markos_admin","1");start();} else toast("Wrong PIN",true); }
+$("pin").addEventListener("keydown",e=>{if(e.key==="Enter")unlock();});
+if(localStorage.getItem("markos_admin")==="1") start();
+
+function start(){
+  $("gate").style.display="none";
+  db.collection("students").onSnapshot(s=>{
+    students=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.earned||0)-(a.earned||0)||a.name.localeCompare(b.name));
+    renderStudents();
+  });
+  db.collection("news").orderBy("createdAt","desc").onSnapshot(s=>{news=s.docs.map(d=>({id:d.id,...d.data()}));renderNews();});
+  db.collection("challenges").orderBy("createdAt","desc").onSnapshot(s=>{challenges=s.docs.map(d=>({id:d.id,...d.data()}));renderChal();});
+  db.collection("shop").orderBy("cost").onSnapshot(s=>{shop=s.docs.map(d=>({id:d.id,...d.data()}));renderShop();});
+  addQ(); addQ();
+}
+
+/* ============================================================
+   4. SCORE + QR SCANNER
+   ============================================================ */
+let op=0, scanner=null, scanning=false, lastScan={id:"",t:0};
+function pick(n){
+  op=n;
+  document.querySelectorAll(".sbtn").forEach(b=>b.classList.toggle("sel",b.textContent===(n>0?"+":"")+n));
+  const l=$("opLabel"); l.textContent=(n>0?"+":"")+n+" 🪶"; l.className="selected-op "+(n>0?"plus":"minus");
+  $("scanBtn").disabled=false; $("manualBtn").disabled=false;
+  if(!scanning) toggleScan();
+}
+async function toggleScan(){
+  if(scanning){ await stopScan(); return; }
+  if(!op){ toast("Pick an amount first",true); return; }
+  $("reader").classList.add("on"); $("scanBtn").textContent="⏹ STOP SCANNING";
+  scanner = new Html5Qrcode("reader");
+  try{
+    await scanner.start({facingMode:"environment"},{fps:10,qrbox:{width:220,height:220}},onScan);
+    scanning=true;
+  }catch(e){ toast("Camera error: "+e,true); $("reader").classList.remove("on"); $("scanBtn").textContent="📷 SCAN QR"; }
+}
+async function stopScan(){
+  try{ await scanner.stop(); scanner.clear(); }catch(e){}
+  scanning=false; $("reader").classList.remove("on"); $("scanBtn").textContent="📷 SCAN QR";
+}
+function onScan(text){
+  const id=text.trim();
+  const now=Date.now();
+  if(lastScan.id===id && now-lastScan.t<3000) return;   // debounce same card
+  lastScan={id,t:now};
+  applyScore(id);
+}
+async function applyScore(id){
+  const s=students.find(x=>x.id===id);
+  if(!s){ toast("Unknown student QR",true); return; }
+  if(!op){ toast("Pick an amount first",true); return; }
+  const ref=db.collection("students").doc(id);
+  try{
+    await db.runTransaction(async t=>{
+      const d=(await t.get(ref)).data();
+      const keros=Math.max(0,(d.keros||0)+op), earned=Math.max(0,(d.earned||0)+op);
+      t.update(ref,{keros,earned});
+    });
+    if(navigator.vibrate) navigator.vibrate(80);
+    toast(`${s.name}: ${op>0?"+":""}${op} 🪶`);
+    const log=document.createElement("div"); log.className="log";
+    log.innerHTML=`<b>${esc(s.name)}</b> ${op>0?"+":""}${op} 🪶 <span class="muted">${new Date().toLocaleTimeString()}</span>`;
+    $("scanLog").prepend(log);
+  }catch(e){ toast("Failed: "+e.message,true); }
+}
+function applyManual(){ const id=$("manualStudent").value; if(id) applyScore(id); }
+
+/* ============================================================
+   5. STUDENTS
+   ============================================================ */
+async function addStudent(){
+  const name=$("newName").value.trim(); if(!name) return;
+  const id=slug(name);
+  const snap=await db.collection("students").doc(id).get();
+  if(snap.exists){ toast("Student already exists",true); return; }
+  await db.collection("students").doc(id).set({name,keros:0,earned:0,badges:[],done:{},purchases:[],createdAt:Date.now()});
+  $("newName").value=""; toast("Added "+name+" ✅");
+}
+function renderStudents(){
+  $("stuCount").textContent=`(${students.length})`;
+  $("manualStudent").innerHTML=students.map(s=>`<option value="${esc(s.id)}">${esc(s.name)} — ${s.keros||0} 🪶</option>`).join("");
+  if(!students.length){ $("stuList").innerHTML=`<div class="empty">No students yet</div>`; return; }
+  $("stuList").innerHTML=students.map((s,i)=>`<div class="card item" onclick="openStudent('${esc(s.id)}')" style="cursor:pointer;animation-delay:${Math.min(i*30,300)}ms">
+    <span class="pill">#${i+1}</span>${avatar(s)}
+    <div class="grow"><h3>${esc(s.name)}</h3><p>${arenaOf(s.earned||0).em} ${esc(arenaOf(s.earned||0).name)} • ${(s.badges||[]).length} badges</p></div>
+    <div style="text-align:right"><span class="pill gold">${s.earned||0} 🪶</span><p class="muted" style="font-size:11px;margin-top:3px">wallet ${s.keros||0}</p></div>
+  </div>`).join("");
+}
+function openStudent(id){
+  const s=students.find(x=>x.id===id); if(!s) return;
+  const b=new Set(s.badges||[]);
+  openModal(`<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">${avatar(s)}<div><h2 style="font-size:24px">${esc(s.name)}</h2><p class="muted">ID: <b>${esc(s.id)}</b></p></div></div>
+    <div class="row" style="margin-bottom:10px">
+      <div style="flex:1"><label class="lbl">EARNED (rank/arena)</label><input class="inp" id="edEarned" type="number" value="${s.earned||0}"></div>
+      <div style="flex:1"><label class="lbl">WALLET (spendable)</label><input class="inp" id="edKeros" type="number" value="${s.keros||0}"></div>
+    </div>
+    <label class="lbl">BADGES (tap to toggle)</label>
+    <div class="badgepick" id="badgePick">${BADGES.map(x=>`<div class="bp ${b.has(x.id)?"on":""}" data-id="${x.id}" onclick="this.classList.toggle('on')"><div class="em">${x.em}</div><div class="nm">${esc(x.name)}</div></div>`).join("")}</div>
+    <button class="btn green wide" style="margin-top:12px" onclick="saveStudent('${esc(s.id)}')">💾 Save</button>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn gold" style="flex:1" onclick="showQR('${esc(s.id)}')">🔳 QR Card</button>
+      <button class="btn red sm" onclick="delStudent('${esc(s.id)}')">🗑</button>
+    </div>
+    ${(s.purchases||[]).length?`<label class="lbl" style="margin-top:14px">PURCHASES</label>${s.purchases.slice().reverse().map(p=>`<div class="log">${esc(p.item)} — ${p.cost} 🪶 <span class="muted">${new Date(p.at).toLocaleDateString()}</span></div>`).join("")}`:""}`);
+}
+async function saveStudent(id){
+  const badges=[...document.querySelectorAll("#badgePick .bp.on")].map(x=>x.dataset.id);
+  await db.collection("students").doc(id).update({earned:+$("edEarned").value||0,keros:+$("edKeros").value||0,badges});
+  toast("Saved ✅"); closeModal();
+}
+async function delStudent(id){
+  const s=students.find(x=>x.id===id);
+  if(!confirm(`Delete ${s.name}? This cannot be undone.`)) return;
+  await db.collection("students").doc(id).delete(); closeModal(); toast("Deleted");
+}
+function showQR(id){
+  const s=students.find(x=>x.id===id);
+  openModal(`<div style="text-align:center"><h2 style="font-size:26px;color:var(--gold)">${esc(s.name)}</h2><p class="muted">Scan to give Keros 🪶</p>
+    <div id="qrbox"></div><p class="muted">ID: <b>${esc(s.id)}</b></p>
+    <button class="btn wide" style="margin-top:10px" onclick="downloadQR('${esc(s.name)}')">⬇ Download PNG</button></div>`);
+  new QRCode($("qrbox"),{text:id,width:220,height:220,correctLevel:QRCode.CorrectLevel.H});
+}
+function downloadQR(name){
+  const c=$("qrbox").querySelector("canvas"); if(!c) return;
+  const a=document.createElement("a"); a.download=`QR-${name}.png`; a.href=c.toDataURL(); a.click();
+}
+
+/* ============================================================
+   6. NEWS
+   ============================================================ */
+async function addNews(){
+  const title=$("newsTitle").value.trim(), text=$("newsText").value.trim();
+  if(!title){ toast("Headline required",true); return; }
+  await db.collection("news").add({title,text,votes:{},createdAt:Date.now()});
+  $("newsTitle").value=""; $("newsText").value=""; toast("Published 📢");
+}
+function renderNews(){
+  if(!news.length){ $("newsList").innerHTML=`<div class="empty">No news yet</div>`; return; }
+  $("newsList").innerHTML=news.map(n=>{
+    const v=Object.values(n.votes||{}); const g=v.filter(x=>x===true).length, no=v.filter(x=>x===false).length;
+    return `<div class="card"><div class="item"><div class="grow"><h3>${esc(n.title)}</h3><p>${esc(n.text)}</p>
+      <div style="margin-top:6px"><span class="pill" style="background:var(--green2)">✅ ${g} going</span> <span class="pill" style="background:var(--red2)">❌ ${no} not</span></div></div>
+      <button class="btn red sm" onclick="delDoc('news','${n.id}')">🗑</button></div>
+      ${g?`<p class="muted" style="margin-top:8px">Going: ${Object.entries(n.votes).filter(([k,v])=>v).map(([k])=>esc((students.find(s=>s.id===k)||{}).name||k)).join(", ")}</p>`:""}</div>`;}).join("");
+}
+async function delDoc(col,id){ if(!confirm("Delete this?")) return; await db.collection(col).doc(id).delete(); toast("Deleted"); }
+
+/* ============================================================
+   7. CHALLENGES
+   ============================================================ */
+let qCount=0;
+function addQ(){
+  qCount++; const n=qCount;
+  const d=document.createElement("div"); d.className="qb"; d.dataset.q=n;
+  d.innerHTML=`<div class="row" style="margin-bottom:8px"><input class="inp q" placeholder="Question ${n}"><button class="btn red sm" onclick="this.closest('.qb').remove()">✕</button></div>
+    <div class="opts">${[0,1,2,3].map(i=>`<div class="opt"><input type="radio" name="ans${n}" value="${i}" ${i===0?"checked":""}><input class="inp o" placeholder="Option ${String.fromCharCode(65+i)}"></div>`).join("")}</div>`;
+  $("qBuilder").appendChild(d);
+}
+async function saveChallenge(){
+  const title=$("chTitle").value.trim(), desc=$("chDesc").value.trim();
+  if(!title){ toast("Title required",true); return; }
+  const questions=[];
+  for(const qb of document.querySelectorAll("#qBuilder .qb")){
+    const q=qb.querySelector(".q").value.trim(); if(!q) continue;
+    const options=[...qb.querySelectorAll(".o")].map(x=>x.value.trim()).filter(Boolean);
+    if(options.length<2){ toast("Each question needs at least 2 options",true); return; }
+    const answer=+qb.querySelector("input[type=radio]:checked").value;
+    if(answer>=options.length){ toast("Correct answer must be a filled option",true); return; }
+    questions.push({q,options,answer});
+  }
+  if(!questions.length){ toast("Add at least one question",true); return; }
+  await db.collection("challenges").add({title,desc,questions,createdAt:Date.now()});
+  $("chTitle").value=""; $("chDesc").value=""; $("qBuilder").innerHTML=""; qCount=0; addQ(); addQ();
+  toast("Challenge saved ⚔️");
+}
+function renderChal(){
+  if(!challenges.length){ $("chalList").innerHTML=`<div class="empty">No challenges yet</div>`; return; }
+  $("chalList").innerHTML=challenges.map(c=>{
+    const done=students.filter(s=>(s.done||{})[c.id]).length;
+    return `<div class="card item"><div class="grow"><h3>${esc(c.title)}</h3><p>${esc(c.desc)}</p>
+      <div style="margin-top:6px"><span class="pill">${(c.questions||[]).length} questions</span> <span class="pill gold">${done} completed</span></div></div>
+      <button class="btn red sm" onclick="delDoc('challenges','${c.id}')">🗑</button></div>`;}).join("");
+}
+
+/* ============================================================
+   8. SHOP
+   ============================================================ */
+async function addGift(){
+  const name=$("gName").value.trim(), emoji=$("gEmoji").value.trim()||"🎁", cost=+$("gCost").value, qty=+$("gQty").value;
+  if(!name||!cost||!qty){ toast("Fill name, cost and quantity",true); return; }
+  await db.collection("shop").add({name,emoji,cost,qty,createdAt:Date.now()});
+  ["gName","gEmoji","gCost","gQty"].forEach(i=>$(i).value=""); toast("Gift added 🎁");
+}
+function renderShop(){
+  if(!shop.length){ $("shopList").innerHTML=`<div class="empty">Shop is empty</div>`; return; }
+  $("shopList").innerHTML=shop.map(g=>`<div class="card item"><div style="font-size:34px">${esc(g.emoji||"🎁")}</div>
+    <div class="grow"><h3>${esc(g.name)}</h3><p>${g.cost} 🪶 each</p></div>
+    <div class="row"><button class="btn gray sm" onclick="qty('${g.id}',-1)">−</button><span class="pill gold" style="min-width:40px;justify-content:center">${g.qty}</span><button class="btn gray sm" onclick="qty('${g.id}',1)">+</button></div>
+    <button class="btn red sm" onclick="delDoc('shop','${g.id}')">🗑</button></div>`).join("");
+}
+async function qty(id,d){ await db.collection("shop").doc(id).update({qty:FV.increment(d)}); }
+
+/* ============================================================
+   9. NAV
+   ============================================================ */
+$("nav").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x===b));
+  document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id==="p-"+b.dataset.p));
+  if(b.dataset.p!=="score" && scanning) stopScan();
+});
+</script>
+</body>
+</html>
